@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+
+import click
+import lief
+
+
+@click.command(
+    help="Compare two binaries to find symbols unique to each binary."
+)
+@click.argument("bin1", type=click.Path(exists=True))
+@click.argument("bin2", type=click.Path(exists=True))
+def cli(bin1, bin2):
+    bin1_parsed = lief.parse(bin1)
+    bin2_parsed = lief.parse(bin2)
+
+    bin1_symbols = set([i.name for i in bin1_parsed.symbols])
+    bin2_symbols = set([i.name for i in bin2_parsed.symbols])
+
+    click.echo("UNIQUE SYMBOLS [{}]:".format(bin1))
+    for symbol in sorted(list(bin1_symbols.difference(bin2_symbols))):
+        click.echo(symbol)
+    click.echo()
+
+    click.echo("UNIQUE SYMBOLS [{}]:".format(bin2))
+    for symbol in sorted(list(bin2_symbols.difference(bin1_symbols))):
+        click.echo(symbol)
+    click.echo()
+
+
+if __name__ == "__main__":
+    cli()
