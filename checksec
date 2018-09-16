@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+
+import click
+import lief
+
+
+@click.command(
+    help="Check the security properties of a binary file."
+)
+@click.argument("bin", type=click.Path(exists=True))
+def cli(bin):
+    bin_parsed = lief.parse(bin)
+
+    if bin_parsed.format == lief.EXE_FORMATS.ELF:
+        bin_format = "ELF"
+    elif bin_parsed.format == lief.EXE_FORMATS.PE:
+        bin_format = "PE"
+    elif bin_parsed.format == lief.EXE_FORMATS.MACHO:
+        bin_format = "Mach-O"
+    else:
+        click.echo("Unknown format detected. Exiting.")
+        return
+
+    click.echo("{} is a {} binary.".format(bin, bin_format))
+    click.echo("PIE:\t\t{}".format("YES" if bin_parsed.is_pie else "NO"))
+    click.echo("NX:\t\t{}".format("YES" if bin_parsed.has_nx else "NO"))
+
+    if bin_format == "ELF":
+        bin_concrete = bin_parsed.concrete
+
+        if bin_concrete.has(lief.ELF.SEGMENT_TYPES.GNU_RELRO):
+            relro = "PARTIAL"
+            if bin_concrete.has(lief.ELF.DYNAMIC_TAGS.BIND_NOW):
+                relro = "FULL"
+        else:
+            relro = "NO"
+        click.echo("RELRO:\t\t{}".format(relro))
+
+        click.echo("Stack Canary:\t{}".format(
+            "YES" if bin_concrete.has_symbol("__stack_chk_fail") else "NO"))
+
+        if bin_concrete.has(lief.ELF.DYNAMIC_TAGS.RUNPATH):
+            runpath = bin_concrete.get(lief.ELF.DYNAMIC_TAGS.RUNPATH).runpath
+        else:
+            runpath = "NONE"
+        click.echo("RUNPATH:\t{}".format(runpath))
+
+        if bin_concrete.has(lief.ELF.DYNAMIC_TAGS.RPATH):
+            rpath = bin_concrete.get(lief.ELF.DYNAMIC_TAGS.RPATH).rpath
+        else:
+            rpath = "NONE"
+        click.echo("RPATH:\t\t{}".format(rpath))
+
+
+if __name__ == "__main__":
+    cli()
