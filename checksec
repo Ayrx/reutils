@@ -25,9 +25,9 @@ def cli(bin):
     click.echo("PIE:\t\t{}".format("YES" if bin_parsed.is_pie else "NO"))
     click.echo("NX:\t\t{}".format("YES" if bin_parsed.has_nx else "NO"))
 
-    if bin_format == "ELF":
-        bin_concrete = bin_parsed.concrete
+    bin_concrete = bin_parsed.concrete
 
+    if bin_format == "ELF":
         if bin_concrete.has(lief.ELF.SEGMENT_TYPES.GNU_RELRO):
             relro = "PARTIAL"
             if bin_concrete.has(lief.ELF.DYNAMIC_TAGS.BIND_NOW):
@@ -50,6 +50,18 @@ def cli(bin):
         else:
             rpath = "NONE"
         click.echo("RPATH:\t\t{}".format(rpath))
+
+    if bin_format == "PE":
+        header = bin_concrete.optional_header
+        click.echo("SEH:\t\t{}".format(
+            "NO" if lief.PE.DLL_CHARACTERISTICS.NO_SEH in
+            header.dll_characteristics_lists else "YES"
+        ))
+
+        click.echo("Force Integrity:{}".format(
+            "YES" if lief.PE.DLL_CHARACTERISTICS.FORCE_INTEGRITY in
+            header.dll_characteristics_lists else "NO"
+        ))
 
 
 if __name__ == "__main__":
