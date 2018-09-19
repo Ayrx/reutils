@@ -22,8 +22,8 @@ def cli(bin):
         return
 
     click.echo("{} is a {} binary.".format(bin, bin_format))
-    click.echo("PIE:\t\t{}".format("YES" if bin_parsed.is_pie else "NO"))
-    click.echo("NX:\t\t{}".format("YES" if bin_parsed.has_nx else "NO"))
+    click.echo("PIE:\t\t\t{}".format("YES" if bin_parsed.is_pie else "NO"))
+    click.echo("NX:\t\t\t{}".format("YES" if bin_parsed.has_nx else "NO"))
 
     bin_concrete = bin_parsed.concrete
 
@@ -34,31 +34,31 @@ def cli(bin):
                 relro = "FULL"
         else:
             relro = "NO"
-        click.echo("RELRO:\t\t{}".format(relro))
+        click.echo("RELRO:\t\t\t{}".format(relro))
 
-        click.echo("Stack Canary:\t{}".format(
+        click.echo("Stack Canary:\t\t{}".format(
             "YES" if bin_concrete.has_symbol("__stack_chk_fail") else "NO"))
 
         if bin_concrete.has(lief.ELF.DYNAMIC_TAGS.RUNPATH):
             runpath = bin_concrete.get(lief.ELF.DYNAMIC_TAGS.RUNPATH).runpath
         else:
             runpath = "NONE"
-        click.echo("RUNPATH:\t{}".format(runpath))
+        click.echo("RUNPATH:\t\t{}".format(runpath))
 
         if bin_concrete.has(lief.ELF.DYNAMIC_TAGS.RPATH):
             rpath = bin_concrete.get(lief.ELF.DYNAMIC_TAGS.RPATH).rpath
         else:
             rpath = "NONE"
-        click.echo("RPATH:\t\t{}".format(rpath))
+        click.echo("RPATH:\t\t\t{}".format(rpath))
 
     if bin_format == "PE":
         header = bin_concrete.optional_header
-        click.echo("SEH:\t\t{}".format(
+        click.echo("SEH:\t\t\t{}".format(
             "NO" if lief.PE.DLL_CHARACTERISTICS.NO_SEH in
             header.dll_characteristics_lists else "YES"
         ))
 
-        click.echo("Force Integrity:{}".format(
+        click.echo("Force Integrity:\t{}".format(
             "YES" if lief.PE.DLL_CHARACTERISTICS.FORCE_INTEGRITY in
             header.dll_characteristics_lists else "NO"
         ))
