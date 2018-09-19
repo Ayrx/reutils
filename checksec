@@ -22,6 +22,9 @@ def cli(bin):
         return
 
     click.echo("{} is a {} binary.".format(bin, bin_format))
+    click.echo()
+
+    click.echo("Exploit mitigations:")
     click.echo("PIE:\t\t\t{}".format("YES" if bin_parsed.is_pie else "NO"))
     click.echo("NX:\t\t\t{}".format("YES" if bin_parsed.has_nx else "NO"))
 
