@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+
+import click
+import lief
+
+
+@click.command(
+    help="Dump section information about a binary."
+)
+@click.argument("bin", type=click.Path(exists=True))
+def cli(bin):
+    bin_parsed = lief.parse(bin)
+
+    for section in bin_parsed.sections:
+        click.echo(section)
+
+
+if __name__ == "__main__":
+    cli()
