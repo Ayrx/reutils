@@ -21,50 +21,83 @@ def cli(bin):
         click.echo("Unknown format detected. Exiting.")
         return
 
-    click.echo("{} is a {} binary.".format(bin, bin_format))
-    click.echo()
-
-    click.echo("Exploit mitigations:")
-    click.echo("PIE:\t\t\t{}".format("YES" if bin_parsed.is_pie else "NO"))
-    click.echo("NX:\t\t\t{}".format("YES" if bin_parsed.has_nx else "NO"))
-
-    bin_concrete = bin_parsed.concrete
+    click.echo("[+] Target is a {} binary.".format(bin_format))
 
     if bin_format == "ELF":
-        if bin_concrete.has(lief.ELF.SEGMENT_TYPES.GNU_RELRO):
-            relro = "PARTIAL"
-            if bin_concrete.has(lief.ELF.DYNAMIC_TAGS.BIND_NOW):
-                relro = "FULL"
-        else:
-            relro = "NO"
-        click.echo("RELRO:\t\t\t{}".format(relro))
+        print("Not implemented yet.")
 
-        click.echo("Stack Canary:\t\t{}".format(
-            "YES" if bin_concrete.has_symbol("__stack_chk_fail") else "NO"))
+    elif bin_format == "PE":
+        print("Not implemented yet.")
 
-        if bin_concrete.has(lief.ELF.DYNAMIC_TAGS.RUNPATH):
-            runpath = bin_concrete.get(lief.ELF.DYNAMIC_TAGS.RUNPATH).runpath
-        else:
-            runpath = "NONE"
-        click.echo("RUNPATH:\t\t{}".format(runpath))
+    elif bin_format == "Mach-O":
+        # We reparse this because we want to get the Fat Binary info...
+        bin_parsed = lief.MachO.parse(bin)
+        macho(bin_parsed)
 
-        if bin_concrete.has(lief.ELF.DYNAMIC_TAGS.RPATH):
-            rpath = bin_concrete.get(lief.ELF.DYNAMIC_TAGS.RPATH).rpath
-        else:
-            rpath = "NONE"
-        click.echo("RPATH:\t\t\t{}".format(rpath))
 
-    if bin_format == "PE":
-        header = bin_concrete.optional_header
-        click.echo("SEH:\t\t\t{}".format(
-            "NO" if lief.PE.DLL_CHARACTERISTICS.NO_SEH in
-            header.dll_characteristics_lists else "YES"
+def macho(bin_parsed):
+    click.echo("[+] Mach-O file contains {} binaries.".format(bin_parsed.size))
+    click.echo()
+
+    # List of runtime ARC functions taken from:
+    # https://clang.llvm.org/docs/AutomaticReferenceCounting.html#runtime-support
+    arc_symbols = [
+        "_objc_autorelease",
+        "_objc_releasePoolPop",
+        "_objc_releasePoolPush",
+        "_objc_autoreleaseReturnValue",
+        "_objc_copyWeak",
+        "_objc_destroyWeak",
+        "_objc_initWeak",
+        "_objc_loadWeak",
+        "_objc_loadWeakRetained",
+        "_objc_moveWeak",
+        "_objc_release",
+        "_objc_retain",
+        "_objc_retainAutorelease",
+        "_objc_retainAutoreleaseReturnValue",
+        "_objc_retainAutoreleasedReturnValue",
+        "_objc_retainBlock",
+        "_objc_storeStrong",
+        "_objc_storeWeak",
+    ]
+
+    stack_canary_symbols = [
+        "___stack_chk_guard",
+        "___stack_chk_fail",
+    ]
+
+    for index, binary in enumerate(bin_parsed):
+        click.echo("#{}: {}".format(index + 1, binary.header.cpu_type))
+
+        has_stack_canary = 0
+        has_arc = 0
+        has_dwarf = False
+
+        for symbol in binary.symbols:
+            if symbol.name in stack_canary_symbols:
+                has_stack_canary += 1
+
+            if symbol.name in arc_symbols:
+                has_arc += 1
+
+        for section in binary.segments:
+            if section.name == "__DWARF":
+                has_dwarf = True
+
+
+        click.echo("{0:15} {1}".format("PIE:", str(binary.is_pie)))
+        click.echo("{0:15} {1}".format(
+            "Stack Canary:",
+            True if has_stack_canary == 2 else False
         ))
-
-        click.echo("Force Integrity:\t{}".format(
-            "YES" if lief.PE.DLL_CHARACTERISTICS.FORCE_INTEGRITY in
-            header.dll_characteristics_lists else "NO"
+        click.echo("{0:15} {1}".format(
+            "ARC:",
+            True if has_arc >= 1 else False
         ))
+        click.echo("{0:15} {1}".format("Debug Symbols:", has_dwarf))
+
+        click.echo()
 
 
 if __name__ == "__main__":
