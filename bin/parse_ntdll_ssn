@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+
+import binaryninja
+from binaryninja.enums import LowLevelILOperation
+import click
+import json
+
+
+@click.command()
+@click.argument("ntdll")
+@click.argument("json_out", type=click.File("w"))
+def main(ntdll, json_out):
+    with binaryninja.open_view(ntdll) as bv:
+        arch = bv.arch.name
+        click.echo("[+] Arch: {}".format(arch))
+        parse_syscall = parse_syscall_32 if arch == "x86" else parse_syscall_64
+
+        click.echo("[+] Parsing syscall numbers from {}".format(ntdll))
+        ssn = [
+            parse_syscall(func) for func in bv.functions if func.name.startswith("Zw")
+        ]
+
+        ssn = dict([i for i in ssn if i is not None])
+
+        click.echo("[+] Writing results to {}".format(json_out.name))
+        json.dump(ssn, json_out)
+
+
+def parse_syscall_64(func):
+    for inst in func.llil.instructions:
+        if inst.operation == LowLevelILOperation.LLIL_SYSCALL:
+            return (func.name, inst.get_reg_value("eax").value)
+
+
+def parse_syscall_32(func):
+    for inst in func.llil.instructions:
+        if inst.operation == LowLevelILOperation.LLIL_CALL:
+            return (func.name, inst.get_reg_value("eax").value)
+
+
+if __name__ == "__main__":
+    main()
